@@ -263,7 +263,7 @@ export const AboutSection: React.FC = () => {
                 {/* Main Portrait */}
                 <img
                   src={aboutImg}
-                  alt="Damisetti Shamya Lohitha"
+                  alt="Kolluru Hemanth Kumar"
                   className="w-full h-full object-cover object-top filter brightness-[0.94] contrast-[1.06] saturate-[1.02] group-hover:brightness-105 group-hover:contrast-[1.12] transition-all duration-700 ease-out"
                 />
 
