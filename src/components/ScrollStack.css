@@ -16,7 +16,7 @@
   width: 100%;
   box-sizing: border-box;
   transform-origin: top center;
-  will-change: transform, filter;
+  will-change: auto;
   backface-visibility: hidden;
   transform-style: preserve-3d;
   -webkit-transform: translateZ(0);

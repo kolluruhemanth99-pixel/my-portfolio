@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useCallback } from 'react';
-import Lenis from 'lenis';
+import type Lenis from 'lenis';
 import './ScrollStack.css';
 
 export interface ScrollStackItemProps {
@@ -47,6 +47,10 @@ const ScrollStack: React.FC<ScrollStackProps> = ({
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const stackCompletedRef = useRef(false);
   const animationFrameRef = useRef<number | null>(null);
+  const nativeScrollFrameRef = useRef<number | null>(null);
+  const isMountedRef = useRef(false);
+  const nativeScrollRef = useRef(false);
+  const reducedMotionRef = useRef(false);
   const lenisRef = useRef<Lenis | null>(null);
   const cardsRef = useRef<HTMLElement[]>([]);
   const initialTopsRef = useRef<number[]>([]);
@@ -82,7 +86,7 @@ const ScrollStack: React.FC<ScrollStackProps> = ({
   }, [useWindowScroll]);
 
   const updateCardTransforms = useCallback(() => {
-    if (!cardsRef.current.length || isUpdatingRef.current) return;
+    if (!cardsRef.current.length || isUpdatingRef.current || reducedMotionRef.current) return;
 
     isUpdatingRef.current = true;
 
@@ -194,8 +198,13 @@ const ScrollStack: React.FC<ScrollStackProps> = ({
     updateCardTransforms();
   }, [updateCardTransforms]);
 
-  const setupLenis = useCallback(() => {
-    const lenis = new Lenis({
+  const setupLenis = useCallback(async () => {
+    // Keep Lenis and its animation loop out of the initial mobile bundle and
+    // avoid initializing it entirely for touch/reduced-motion users.
+    const { default: LenisConstructor } = await import('lenis');
+    if (!isMountedRef.current || nativeScrollRef.current) return;
+
+    const lenis = new LenisConstructor({
       duration: 1.2,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
@@ -213,15 +222,31 @@ const ScrollStack: React.FC<ScrollStackProps> = ({
     animationFrameRef.current = requestAnimationFrame(raf);
 
     lenisRef.current = lenis;
-    return lenis;
   }, [handleScroll]);
 
+  const scheduleNativeScrollUpdate = useCallback(() => {
+    if (nativeScrollFrameRef.current !== null || reducedMotionRef.current) return;
+
+    nativeScrollFrameRef.current = requestAnimationFrame(() => {
+      nativeScrollFrameRef.current = null;
+      updateCardTransforms();
+    });
+  }, [updateCardTransforms]);
+
   useLayoutEffect(() => {
+    isMountedRef.current = true;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
+    nativeScrollRef.current = isTouchDevice || prefersReducedMotion;
+    reducedMotionRef.current = prefersReducedMotion;
+
     const cards = Array.from(
       document.querySelectorAll('.scroll-stack-card')
     ) as HTMLElement[];
 
     cardsRef.current = cards;
+    const scrollTarget = useWindowScroll ? window : scrollerRef.current;
+    const lastTransforms = lastTransformsRef.current;
 
     // Record static natural top positions before any transforms are applied
     initialTopsRef.current = cards.map((card) => {
@@ -234,28 +259,42 @@ const ScrollStack: React.FC<ScrollStackProps> = ({
       if (i < cards.length - 1) {
         card.style.marginBottom = `${itemDistance}px`;
       }
-      card.style.willChange = 'transform, filter';
+      card.style.willChange = 'auto';
       card.style.transformOrigin = 'top center';
-      card.style.backfaceVisibility = 'hidden';
-      card.style.transform = 'translateZ(0)';
-      card.style.perspective = '1000px';
+      if (!nativeScrollRef.current) {
+        card.style.backfaceVisibility = 'hidden';
+        card.style.transform = 'translateZ(0)';
+        card.style.perspective = '1000px';
+      }
     });
 
-    setupLenis();
-    updateCardTransforms();
+    if (nativeScrollRef.current) {
+      scrollTarget?.addEventListener('scroll', scheduleNativeScrollUpdate, { passive: true });
+      if (!reducedMotionRef.current) scheduleNativeScrollUpdate();
+    } else {
+      void setupLenis();
+      updateCardTransforms();
+    }
 
     return () => {
+      isMountedRef.current = false;
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+      if (nativeScrollFrameRef.current) {
+        cancelAnimationFrame(nativeScrollFrameRef.current);
+      }
+      scrollTarget?.removeEventListener('scroll', scheduleNativeScrollUpdate);
       if (lenisRef.current) {
         lenisRef.current.destroy();
       }
       stackCompletedRef.current = false;
       cardsRef.current = [];
       initialTopsRef.current = [];
-      lastTransformsRef.current.clear();
+      lastTransforms.clear();
       isUpdatingRef.current = false;
+      nativeScrollRef.current = false;
+      reducedMotionRef.current = false;
     };
   }, [
     itemDistance,
@@ -268,6 +307,7 @@ const ScrollStack: React.FC<ScrollStackProps> = ({
     blurAmount,
     useWindowScroll,
     onStackComplete,
+    scheduleNativeScrollUpdate,
     setupLenis,
     updateCardTransforms,
   ]);

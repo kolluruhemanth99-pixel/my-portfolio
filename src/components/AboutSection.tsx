@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import aboutImg from '../assets/about.png';
+import aboutImg from '../assets/about.webp';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -75,12 +75,12 @@ export const AboutSection: React.FC = () => {
       <motion.div 
         animate={{ scale: [1, 1.2, 1], opacity: [0.08, 0.16, 0.08] }}
         transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute top-1/4 left-1/6 w-[32rem] h-[32rem] bg-[#D4AF37] rounded-full blur-[160px] pointer-events-none"
+        className="absolute top-1/4 left-1/6 w-[32rem] h-[32rem] bg-[#D4AF37] rounded-full blur-[160px] mobile-performance-blur pointer-events-none"
       />
       <motion.div 
         animate={{ scale: [1.2, 1, 1.2], opacity: [0.05, 0.12, 0.05] }}
         transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute bottom-1/6 right-1/4 w-[28rem] h-[28rem] bg-[#8C6D4F] rounded-full blur-[170px] pointer-events-none"
+        className="absolute bottom-1/6 right-1/4 w-[28rem] h-[28rem] bg-[#8C6D4F] rounded-full blur-[170px] mobile-performance-blur pointer-events-none"
       />
 
       <div className="max-w-7xl mx-auto w-full relative z-10">
@@ -264,6 +264,8 @@ export const AboutSection: React.FC = () => {
                 <img
                   src={aboutImg}
                   alt="Kolluru Hemanth Kumar"
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover object-top filter brightness-[0.94] contrast-[1.06] saturate-[1.02] group-hover:brightness-105 group-hover:contrast-[1.12] transition-all duration-700 ease-out"
                 />
 

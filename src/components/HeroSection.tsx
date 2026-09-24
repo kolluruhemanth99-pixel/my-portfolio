@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import watermarkImg from '../assets/watermark.png';
+import watermarkImg from '../assets/watermark.webp';
+import heroMobileImg from '../assets/hero-mobile.webp';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -36,15 +37,29 @@ const navItems = [
 ];
 
 export const HeroSection: React.FC = () => {
+  const [isTouchDevice, setIsTouchDevice] = useState(() =>
+    window.matchMedia('(pointer: coarse), (max-width: 767px)').matches,
+  );
   const [cursorPos, setCursorPos] = useState({ x: -100, y: -100 });
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia('(pointer: coarse), (max-width: 767px)');
+    const updateDeviceMode = () => setIsTouchDevice(mediaQuery.matches);
+    mediaQuery.addEventListener('change', updateDeviceMode);
+
+    if (mediaQuery.matches) {
+      return () => mediaQuery.removeEventListener('change', updateDeviceMode);
+    }
+
     const handleMouseMove = (e: MouseEvent) => {
       setCursorPos({ x: e.clientX, y: e.clientY });
     };
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    return () => {
+      mediaQuery.removeEventListener('change', updateDeviceMode);
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
   }, []);
 
   return (
@@ -66,15 +81,27 @@ export const HeroSection: React.FC = () => {
 
       {/* ================= 2. FIXED VIDEO LAYER ================= */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-black flex items-center justify-end">
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="h-screen w-auto max-w-none object-contain origin-right scale-95 md:scale-[0.98] lg:scale-100"
-        >
-          <source src="/videos/hero.mp4" type="video/mp4" />
-        </video>
+        {!isTouchDevice ? (
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="hero-video h-screen w-auto max-w-none object-contain origin-right scale-95 md:scale-[0.98] lg:scale-100"
+          >
+            <source src="/videos/hero.mp4" type="video/mp4" />
+          </video>
+        ) : (
+          <img
+            src={heroMobileImg}
+            alt=""
+            aria-hidden="true"
+            fetchPriority="high"
+            decoding="async"
+            className="hero-mobile-fallback h-screen w-full object-cover object-center"
+          />
+        )}
 
         {/* Seamless Soft Left Edge Blend */}
         <div className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-black via-black/85 to-transparent pointer-events-none" />
@@ -82,7 +109,7 @@ export const HeroSection: React.FC = () => {
         {/* ================= 3. ANIMATED WATERMARK EMBLEM ================= */}
         <div className="absolute bottom-6 right-6 lg:bottom-10 lg:right-12 pointer-events-none flex items-center justify-center z-10">
           <div className="relative flex items-center justify-center">
-            <div className="absolute w-36 h-36 bg-black/85 rounded-full blur-xl" />
+            <div className="absolute w-36 h-36 bg-black/85 rounded-full blur-xl mobile-performance-blur" />
 
             <motion.div
               animate={{
